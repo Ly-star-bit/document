@@ -1,7 +1,9 @@
 import { getExtensions } from 'ranuts/utils';
 import 'ranui/message';
 import { g_sEmpty_bin } from './empty_bin';
-import { getDocmentObj } from '@/store';
+import { getDocmentObj, setDocmentObj } from '@/store';
+import { uploadToS3 } from './s3';
+import { getS3Settings } from './settings';
 
 declare global {
   interface Window {
@@ -322,9 +324,9 @@ class X2TConverter {
   }
 
   /**
-   * 将 bin 格式转换为指定格式并下载
+   * 将 bin 格式转换为指定格式
    */
-  async convertBinToDocumentAndDownload(
+  async convertBinToDocument(
     bin: Uint8Array,
     originalFileName: string,
     targetExt = 'DOCX',
@@ -359,13 +361,6 @@ class X2TConverter {
       // 读取生成的文档
       const result = this.x2tModule!.FS.readFile(`/working/${outputFileName}`);
 
-      // 确保 result 是 Uint8Array 类型
-      const resultArray = result instanceof Uint8Array ? result : new Uint8Array(result as ArrayBuffer);
-
-      // 下载文件
-      // TODO: 完善打印功能
-      this.saveWithFileSystemAPI(resultArray, outputFileName);
-
       return {
         fileName: outputFileName,
         data: result,
@@ -373,6 +368,32 @@ class X2TConverter {
     } catch (error) {
       throw new Error(`Bin to document conversion failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
+  }
+
+  /**
+   * 下载文件到本地
+   */
+  async downloadDocument(data: Uint8Array | BlobPart, fileName: string): Promise<void> {
+    try {
+      // 确保数据是 Uint8Array 类型
+      const fileData = data instanceof Uint8Array ? data : new Uint8Array(data as ArrayBuffer);
+      await this.saveWithFileSystemAPI(fileData, fileName);
+    } catch (error) {
+      throw new Error(`Document download failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
+   * 将 bin 格式转换为指定格式并下载（向后兼容的方法）
+   */
+  async convertBinToDocumentAndDownload(
+    bin: Uint8Array,
+    originalFileName: string,
+    targetExt = 'DOCX',
+  ): Promise<BinConversionResult> {
+    const result = await this.convertBinToDocument(bin, originalFileName, targetExt);
+    await this.downloadDocument(result.data, result.fileName);
+    return result;
   }
 
   /**
@@ -623,6 +644,7 @@ interface SaveEvent {
     };
     option: {
       outputformat: number;
+      actionType: number;
     };
   };
 }
@@ -631,10 +653,63 @@ async function handleSaveDocument(event: SaveEvent) {
   console.log('Save document event:', event);
 
   if (event.data && event.data.data) {
+    const action_type = event.data.option.actionType;
     const { data, option } = event.data;
     const { fileName } = getDocmentObj() || {};
-    // 创建下载
-    await convertBinToDocumentAndDownload(data.data, fileName, c_oAscFileType2[option.outputformat]);
+    
+    try {
+      // 先将二进制数据转换为实际文档格式
+      const fileExt = c_oAscFileType2[option.outputformat];
+      
+      // action_type为1时是保存操作，需要判断是否保存到S3
+      if (action_type === 1) {
+        const s3Settings = getS3Settings();
+        const convertResult = await x2tConverter.convertBinToDocument(
+          data.data,
+          fileName,
+          fileExt
+        );
+        
+        // 如果有S3配置，保存到S3
+        if (s3Settings) {
+          // 确保数据是 Uint8Array 类型
+          const uploadData = convertResult.data instanceof Uint8Array 
+            ? convertResult.data 
+            : new Uint8Array(convertResult.data as ArrayBuffer);
+          
+          // 生成S3文件路径
+          const s3Key = `documents/${fileName}`;
+          
+          // 上传转换后的文档到S3
+          const result = await uploadToS3(s3Key, uploadData);
+          if (result.success) {
+            // 更新文档对象，添加s3Key
+            setDocmentObj({
+              fileName,
+              file: new File([uploadData], fileName),
+              url: window.URL.createObjectURL(new Blob([uploadData])),
+              s3Key,
+            });
+            window?.message?.success?.(`文件已保存到S3：${fileName}`);
+          } else {
+            throw new Error(result.error);
+          }
+        } else {
+          // 如果没有S3配置，使用本地保存
+          await x2tConverter.downloadDocument(convertResult.data, convertResult.fileName);
+        }
+      } else {
+        // 非保存操作（如另存为），直接使用本地下载
+        await x2tConverter.convertBinToDocumentAndDownload(
+          data.data,
+          fileName,
+          fileExt
+        );
+      }
+    } catch (error) {
+      console.error('保存文件失败:', error);
+      window?.message?.error?.(`保存文件失败: ${error instanceof Error ? error.message : String(error)}`);
+    }
   }
 
   // 告知编辑器保存完成

@@ -22,6 +22,7 @@
     "@eslint/js": "^9.29.0",
     "@tailwindcss/postcss": "^4.1.8",
     "@types/node": "^22.15.3",
+    "@types/pdfjs-dist": "^2.10.377",
     "@typescript-eslint/parser": "^8.34.0",
     "eslint": "^9.29.0",
     "eslint-plugin-import-x": "^4.15.2",
@@ -36,7 +37,11 @@
     "vite": "^6.2.0"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.844.0",
+    "@smithy/util-stream": "^4.2.3",
+    "pdfjs-dist": "^5.3.93",
     "ranui": "0.1.10-alpha.19",
-    "ranuts": "0.1.0-alpha-22"
+    "ranuts": "0.1.0-alpha-22",
+    "viewerjs": "^1.11.7"
   }
 }
