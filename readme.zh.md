@@ -1,5 +1,7 @@
 # OnlyOffice Web
 
+> **更新日志**：2025年7月16日，增加了 S3、PDF 预览和图片预览功能。
+
 🌐 **在线体验**: https://ranuts.github.io/document/
 
 [English](readme.md) | [中文](readme.zh.md)

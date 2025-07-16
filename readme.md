@@ -1,5 +1,7 @@
 # OnlyOffice Web
 
+> **Update log**: July 16, 2025, added S3, PDF preview, and image preview features.
+
 🌐 **Live Demo**: https://ranuts.github.io/document/
 
 [English](readme.md) | [中文](readme.zh.md)
