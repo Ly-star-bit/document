@@ -13,6 +13,68 @@ input {
   outline: unset;
 }
 
+/* PDF 文本层样式 */
+.textLayer {
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  overflow: hidden;
+  opacity: 0.2;
+  line-height: 1.0;
+}
+
+.textLayer > span {
+  color: transparent;
+  position: absolute;
+  white-space: pre;
+  cursor: text;
+  transform-origin: 0% 0%;
+}
+
+.textLayer .highlight {
+  margin: -1px;
+  padding: 1px;
+  background-color: rgba(180, 0, 170, 0.2);
+  border-radius: 4px;
+}
+
+.textLayer .highlight.begin {
+  border-radius: 4px 0px 0px 4px;
+}
+
+.textLayer .highlight.end {
+  border-radius: 0px 4px 4px 0px;
+}
+
+.textLayer .highlight.middle {
+  border-radius: 0px;
+}
+
+.textLayer .highlight.selected {
+  background-color: rgba(0, 100, 0, 0.2);
+}
+
+/* PDF 页面容器样式 */
+.pdfPageContainer {
+  position: relative;
+  margin: 10px 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  background-color: white;
+}
+
+/* 搜索高亮样式 */
+.searchHighlight {
+  background-color: rgba(255, 255, 0, 0.6);
+  padding: 1px 2px;
+  border-radius: 2px;
+}
+
+.searchHighlight.current {
+  background-color: rgba(255, 165, 0, 0.8);
+}
+
 .no-scrollbar::-webkit-scrollbar {
   width: 0px;
   display: none;
